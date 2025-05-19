@@ -6,28 +6,40 @@ declare global {
 
 const publicKey = 'pk_live_cdb4543errg51qnd5244';
 
-export async function createPayment(amount: number, description: string) {
+interface YocoResult {
+  id: string;
+  status: string;
+  error?: {
+    message: string;
+  };
+}
+
+export async function createPayment(amount: number, description: string): Promise<{ success: boolean; transactionId: string; status: string }> {
   return new Promise((resolve, reject) => {
-    const yoco = new window.YocoSDK({
-      publicKey,
-    });
-    
-    yoco.showPopup({
-      amountInCents: amount * 100,
-      currency: 'ZAR',
-      name: 'Umnotho Wasekasi',
-      description,
-      callback: (result: any) => {
-        if (result.error) {
-          reject(new Error(result.error.message));
-        } else {
-          resolve({
-            success: true,
-            transactionId: result.id,
-            status: result.status,
-          });
+    try {
+      const yoco = new window.YocoSDK({
+        publicKey,
+      });
+      
+      yoco.showPopup({
+        amountInCents: Math.round(amount * 100), // Ensure amount is rounded to avoid decimal issues
+        currency: 'ZAR',
+        name: 'Umnotho Wasekasi',
+        description,
+        callback: (result: YocoResult) => {
+          if (result.error) {
+            reject(new Error(result.error.message));
+          } else {
+            resolve({
+              success: true,
+              transactionId: result.id,
+              status: result.status,
+            });
+          }
         }
-      }
-    });
+      });
+    } catch (error) {
+      reject(error);
+    }
   });
 }

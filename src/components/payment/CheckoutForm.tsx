@@ -30,7 +30,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
       standard: 'standard',
       basic: 'basic'
     };
-    return typeMap[type.toLowerCase()] || 'basic';
+    return typeMap[type.toLowerCase()];
   };
 
   const onSubmit = async (formData: UserDetails) => {
@@ -77,6 +77,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
 
       // Create ticket order with a valid ticket type
       const validTicketType = getValidTicketType(selectedTicket.type);
+      
+      if (!validTicketType) {
+        throw new Error('Invalid ticket type');
+      }
+
       const { error: orderError, data: orderData } = await createTicketOrder(
         validTicketType,
         quantity,
@@ -85,6 +90,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
 
       if (orderError) {
         throw new Error('Failed to create order');
+      }
+
+      if (!orderData || orderData.length === 0) {
+        throw new Error('No order data received');
       }
 
       const description = `${quantity}x ${selectedTicket.title} Ticket${quantity > 1 ? 's' : ''}`;
