@@ -22,7 +22,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
 
   const totalAmount = selectedTicket.price * quantity;
 
-  // Map the ticket type to a valid value for the database
   const getValidTicketType = (type: string): 'premium' | 'standard' | 'basic' => {
     const typeMap: Record<string, 'premium' | 'standard' | 'basic'> = {
       cash: 'basic',
@@ -41,6 +40,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
       navigate('/login', { state: { from: `/checkout/${selectedTicket.type}` } });
       return;
     }
+
+    let orderId: string | null = null;
 
     try {
       // Check if profile exists
@@ -62,11 +63,9 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
       let profileError;
 
       if (existingProfile) {
-        // Update existing profile
         const { error: updateError } = await updateProfile(user.id, profileData);
         profileError = updateError;
       } else {
-        // Create new profile
         const { error: createError } = await createProfile(profileData);
         profileError = createError;
       }
@@ -75,13 +74,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
         throw new Error('Failed to save user details');
       }
 
-      // Create ticket order with a valid ticket type
       const validTicketType = getValidTicketType(selectedTicket.type);
       
       if (!validTicketType) {
         throw new Error('Invalid ticket type');
       }
 
+      // Create pending order
       const { error: orderError, data: orderData } = await createTicketOrder(
         validTicketType,
         quantity,
@@ -96,6 +95,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
         throw new Error('No order data received');
       }
 
+      orderId = orderData[0].id;
       const description = `${quantity}x ${selectedTicket.title} Ticket${quantity > 1 ? 's' : ''}`;
       
       try {
@@ -107,7 +107,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
         if (success && transactionId) {
           // Update order with transaction ID and completed status
           const { error: updateOrderError } = await updateTicketOrder(
-            orderData[0].id,
+            orderId,
             transactionId,
             'completed'
           );
@@ -138,11 +138,17 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
           });
         }
       } catch (paymentError: any) {
-        // Update order status to cancelled if payment fails
-        await updateTicketOrder(orderData[0].id, null, 'cancelled');
+        // Cancel the order if payment fails
+        if (orderId) {
+          await updateTicketOrder(orderId, null, 'cancelled');
+        }
         throw paymentError;
       }
     } catch (err: any) {
+      // If order exists but wasn't updated, ensure it's cancelled
+      if (orderId) {
+        await updateTicketOrder(orderId, null, 'cancelled').catch(console.error);
+      }
       setError(err.message || 'An error occurred during checkout');
       console.error('Checkout error:', err);
     } finally {
