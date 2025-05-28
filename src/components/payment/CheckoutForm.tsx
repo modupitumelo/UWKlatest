@@ -319,7 +319,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ selectedTicket }) => {
               required
             />
             <label htmlFor="terms" className="ml-2 text-sm text-neutral-600">
-              I agree to the <a href="/terms" className="text-primary-600 hover:underline">Terms and Conditions</a> and <a href="/privacy" className=\"text-primary-600 hover:underline">Privacy Policy</a>
+              I agree to the <a href="/terms" className="text-primary-600 hover:underline">Terms and Conditions</a> and <a href="/privacy" className="text-primary-600 hover:underline">Privacy Policy</a>
             </label>
           </div>
         </div>
